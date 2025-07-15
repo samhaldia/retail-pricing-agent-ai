@@ -142,6 +142,40 @@ Before you begin, ensure you have the following installed and configured:
 3.  **State machine name**: `RetailPricingOptimizationWorkflow`.
 4.  **Permissions**: Choose "Use an existing role" -> Select `RetailAgentLambdaRole`.
 5.  **Definition (Code tab)**: Paste the Amazon States Language (ASL) definition for your workflow here (you'll need to obtain this from your project's Step Functions design or previous instructions), ensuring you replace `YOUR_ACCOUNT_ID` with your actual 12-digit AWS account ID.
+'''
+{
+  "Comment": "A state machine for retail pricing and promotion optimization.",
+  "StartAt": "InvokeMarketDataIngestor",
+  "States": {
+    "InvokeMarketDataIngestor": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:us-east-1:YOUR_ACCOUNT_ID:function:MarketDataIngestorAgent",
+      "Next": "InvokeDemandForecast",
+      "ResultPath": "$.ingestedData"
+    },
+    "InvokeDemandForecast": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:us-east-1:YOUR_ACCOUNT_ID:function:DemandForecastAgent",
+      "InputPath": "$.ingestedData",
+      "Next": "InvokePromotionStrategy",
+      "ResultPath": "$.forecastsOutput"
+    },
+    "InvokePromotionStrategy": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:us-east-1:YOUR_ACCOUNT_ID:function:PromotionStrategyAgent",
+      "InputPath": "$.forecastsOutput",
+      "Next": "InvokePriceSync",
+      "ResultPath": "$.strategyOutput"
+    },
+    "InvokePriceSync": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:us-east-1:YOUR_ACCOUNT_ID:function:RealTimePriceSyncAgent",
+      "InputPath": "$.strategyOutput.pricing_recommendations",
+      "End": true
+    }
+  }
+}
+'''
 6.  Create the state machine.
 7.  Copy its **ARN** (e.g., `arn:aws:states:us-east-1:123456789012:stateMachine:RetailPricingOptimizationWorkflow`). You will paste this ARN into the `STEP_FUNCTIONS_STATE_MACHINE_ARN` variable in your local `.env` file.
 
