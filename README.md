@@ -65,6 +65,7 @@ retail-pricing-optimizer/
 └── .env                               # Global environment variables (AWS credentials, table names, ARNs)
 ``````
 
+
 ### Dashboard an Demo
 ![Agentic AI Retail Pricing Agnet Dashboard](https://github.com/samhaldia/retail-pricing-agent-ai/blob/main/Retail-AI.PNG "Agentic AI Retail Pricing Agnet")
 
