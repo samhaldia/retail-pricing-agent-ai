@@ -1,0 +1,7 @@
+[
+  {"sku": "P001", "current_stock": 120, "reorder_point": 50, "timestamp": "2025-07-14T09:00:00Z"},
+  {"sku": "P002", "current_stock": 300, "reorder_point": 100, "timestamp": "2025-07-14T09:05:00Z"},
+  {"sku": "P003", "current_stock": 80, "reorder_point": 30, "timestamp": "2025-07-14T09:10:00Z"},
+  {"sku": "P004", "current_stock": 500, "reorder_point": 200, "timestamp": "2025-07-14T09:15:00Z"},
+  {"sku": "P005", "current_stock": 180, "reorder_point": 70, "timestamp": "2025-07-14T09:20:00Z"}
+]

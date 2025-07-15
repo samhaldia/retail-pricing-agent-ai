@@ -1,0 +1,6 @@
+[
+  {"transaction_id": "T001", "sku": "P001", "quantity": 1, "price": 999.99, "customer_id": "C101", "timestamp": "2025-07-13T15:30:00Z"},
+  {"transaction_id": "T002", "sku": "P002", "quantity": 2, "price": 199.99, "customer_id": "C102", "timestamp": "2025-07-13T16:00:00Z"},
+  {"transaction_id": "T003", "sku": "P001", "quantity": 1, "price": 999.99, "customer_id": "C103", "timestamp": "2025-07-13T17:00:00Z"},
+  {"transaction_id": "T004", "sku": "P004", "quantity": 3, "price": 79.99, "customer_id": "C101", "timestamp": "2025-07-13T18:00:00Z"}
+]

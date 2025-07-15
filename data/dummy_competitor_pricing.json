@@ -1,0 +1,7 @@
+[
+  {"sku": "P001", "competitor_price": 949.99, "timestamp": "2025-07-14T10:00:00Z"},
+  {"sku": "P002", "competitor_price": 205.00, "timestamp": "2025-07-14T10:05:00Z"},
+  {"sku": "P003", "competitor_price": 340.00, "timestamp": "2025-07-14T10:10:00Z"},
+  {"sku": "P004", "competitor_price": 80.00, "timestamp": "2025-07-14T10:15:00Z"},
+  {"sku": "P005", "competitor_price": 125.00, "timestamp": "2025-07-14T10:20:00Z"}
+]

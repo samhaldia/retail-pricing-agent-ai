@@ -1,0 +1,66 @@
+# Environment variables
+.env
+.env.*.local # For specific local environment files if you use them
+
+# Python specific files
+__pycache__/
+*.pyc
+*.pyd
+*.pyo
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+*.env # Redundant if .env is at root, but good for subdirectories
+venv/ # Python virtual environment directory
+.venv/ # Another common name for Python virtual environment
+
+# Node.js / Frontend specific files
+node_modules/
+dist/ # Parcel build output directory
+build/ # Another common build output directory
+.parcel-cache/ # Parcel's cache directory
+.cache/ # General cache directory
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json # Can be included if you want strict dependency versions, but often ignored for simplicity in demos
+# yarn.lock # Same as above
+
+# IDE specific files
+.idea/ # IntelliJ IDEA / PyCharm
+.vscode/ # Visual Studio Code
+*.sublime-project
+*.sublime-workspace
+.project
+.classpath
+.settings/
+
+# Operating System files
+.DS_Store # macOS
+Thumbs.db # Windows
+ehthumbs.db # Windows
+Desktop.ini # Windows
+
+# AWS CLI / Boto3 specific (credentials, cache)
+.aws/credentials # NEVER commit this
+.aws/config # NEVER commit this
+.aws/cli/cache/
+*.session # Boto3 session files if created
+
+# Log files
+*.log
+logs/
+*.txt # Be careful with this if you have important .txt files
+
+# Database files (if any local DBs are used, e.g., SQLite)
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary files
+*~
+*.bak
+*.swp
+.tmp/
+tmp/

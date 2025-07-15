@@ -1,0 +1,5 @@
+[
+  {"customer_id": "C101", "segment": "Loyalty Tier A", "preferences": ["electronics", "smart home"], "last_purchase_date": "2025-07-13"},
+  {"customer_id": "C102", "segment": "New Customer", "preferences": ["audio"], "last_purchase_date": "2025-07-13"},
+  {"customer_id": "C103", "segment": "Electronics Enthusiast", "preferences": ["electronics", "gaming"], "last_purchase_date": "2025-07-13"}
+]
