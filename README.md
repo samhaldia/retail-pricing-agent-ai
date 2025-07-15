@@ -1,25 +1,29 @@
-🛍️ Agentic AI Retail Pricing Optimizer
-🚀 Project Overview
-The Agentic AI Retail Pricing Optimizer is a cutting-edge, cloud-native application designed to transform retail pricing and promotion strategies. It leverages intelligent AI agents, a robust serverless architecture on AWS, and real-time data processing to deliver dynamic price recommendations and personalized promotional ideas. This project showcases how AI-driven automation can significantly enhance business agility and profitability in the competitive retail sector.
+# 🛍️ Agentic AI Retail Pricing Optimizer
 
-✨ Features
+---
+
+## 🚀 Project Overview
+
+The Agentic AI Retail Pricing Optimizer is a cutting-edge, cloud-native application designed to transform retail pricing and promotion strategies. By leveraging intelligent AI agents, a robust serverless architecture on AWS, and real-time data processing, this project delivers dynamic price recommendations and personalized promotional ideas. It's a powerful demonstration of how AI-driven automation can significantly enhance business agility and profitability within the competitive retail sector.
+
+---
+
+## ✨ Features
+
 This application provides the following core functionalities:
 
-Dynamic Product Dashboard: Gain a real-time, comprehensive overview of product inventory, current prices, and vital key performance metrics.
+* **Dynamic Product Dashboard**: Gain a real-time, comprehensive overview of product inventory, current prices, and vital key performance metrics.
+* **Automated Agent Workflow Trigger**: Initiate a complete cycle of interconnected AI agents—including market data ingestion, demand forecasting, promotion strategy generation, and price synchronization—with a single, intuitive click.
+* **Intelligent Price Recommendations**: Generates data-driven price adjustments for products, dynamically informed by prevailing market conditions, inventory levels, and precise demand forecasts.
+* **AI-Powered Promotion Idea Generation**: Utilizes powerful Large Language Models (LLMs) via Amazon Bedrock to craft creative, targeted promotional campaign ideas tailored for specific products and customer segments.
+* **Recommendation Management**: Easily view and apply pending price recommendations directly from the user interface, simulating real-world price updates to your e-commerce system.
+* **Real-time Data Sync (Simulated)**: The `RealTimePriceSyncAgent` simulates the crucial process of updating an external e-commerce system with new prices, meticulously logging all such actions for auditing.
+* **Cloud-Native Architecture**: Built entirely on AWS serverless technologies (Lambda, Step Functions, DynamoDB, S3, Bedrock) to ensure unparalleled scalability, high reliability, and optimal cost-efficiency.
 
-Automated Agent Workflow Trigger: Initiate a complete cycle of interconnected AI agents—including market data ingestion, demand forecasting, promotion strategy generation, and price synchronization—with a single, intuitive click.
+---
 
-Intelligent Price Recommendations: Generates data-driven price adjustments for products, dynamically informed by prevailing market conditions, inventory levels, and precise demand forecasts.
+## 🏗️ Architecture and Structure
 
-AI-Powered Promotion Idea Generation: Utilizes powerful Large Language Models (LLMs) via Amazon Bedrock to craft creative, targeted promotional campaign ideas tailored for specific products and customer segments.
-
-Recommendation Management: Easily view and apply pending price recommendations directly from the user interface, simulating real-world price updates to your e-commerce system.
-
-Real-time Data Sync (Simulated): The RealTimePriceSyncAgent simulates the crucial process of updating an external e-commerce system with new prices, meticulously logging all such actions for auditing.
-
-Cloud-Native Architecture: Built entirely on AWS serverless technologies (Lambda, Step Functions, DynamoDB, S3, Bedrock) to ensure unparalleled scalability, high reliability, and optimal cost-efficiency.
-
-🏗️ Architecture and Structure
 The project is thoughtfully structured with a clear separation of concerns, featuring a React frontend, a local Python backend (Flask acting as a local API Gateway/orchestrator), and seamless integration with various AWS cloud services that the local backend orchestrates and interacts with.
 
 ``````
@@ -72,132 +76,102 @@ retail-pricing-agent-ai/
 
 ![Agentic AI Retail Pricing Agnet Idea Generation](https://github.com/samhaldia/retail-pricing-agent-ai/blob/main/Retail-AI-Products-Ideas.PNG "Agentic AI Retail Pricing Agnet Idea Generation")
 
-Export to Sheets
-🛠️ Setup Guide: Running Locally Connected to AWS
+
+## 🛠️ Setup Guide: Running Locally Connected to AWS
+
 Follow these comprehensive steps to get the application running on your local machine, seamlessly interacting with live AWS resources.
 
-Prerequisites
+### Prerequisites
+
 Before you begin, ensure you have the following installed and configured:
 
-Python 3.8+: Installed and added to your system's PATH.
+* **Python 3.8+**: Installed and added to your system's PATH.
+* **Node.js & npm**: Installed (LTS version recommended).
+* **AWS CLI**: Installed and configured. Run `aws configure` and ensure it's set up for `us-east-1` with credentials that have permissions to create and manage IAM, S3, DynamoDB, Bedrock, and Step Functions resources.
+* **Project Files**: You should have the complete `retail-pricing-agent-ai` project structure cloned or downloaded to your local machine.
 
-Node.js & npm: Installed (LTS version recommended).
+### Create Your AWS Resources (Using AWS Console UI)
 
-AWS CLI: Installed and configured. Run aws configure and ensure it's set up for us-east-1 with credentials that have permissions to create and manage IAM, S3, DynamoDB, Bedrock, and Step Functions resources.
+**Important**: Ensure you are operating within the **US East (N. Virginia) `us-east-1` region** in your AWS Console for all resource creation.
 
-Project Files: You should have the complete retail-pricing-agent-ai project structure cloned or downloaded to your local machine.
+#### 1. Create IAM Role (`RetailAgentLambdaRole`)
 
-Create Your AWS Resources (Using AWS Console UI)
-Important: Ensure you are operating within the US East (N. Virginia) us-east-1 region in your AWS Console for all resource creation.
+1.  Navigate to **IAM** -> **Roles** -> **Create role**.
+2.  **Trusted entity type**: `AWS service` -> `Lambda`.
+3.  **Permissions**: Attach the following AWS managed policies:
+    * `AWSLambdaBasicExecutionRole`
+    * `AmazonS3FullAccess`
+    * `AmazonDynamoDBFullAccess`
+    * `AmazonBedrockFullAccess`
+    * `AWSStepFunctionsFullAccess`
+4.  **Role name**: `RetailAgentLambdaRole`.
+5.  Complete the role creation.
 
-Create IAM Role (RetailAgentLambdaRole):
+#### 2. Create S3 Buckets (4 total)
 
-Navigate to IAM -> Roles -> Create role.
+1.  Go to **S3** -> **Create bucket**.
+2.  Create these four buckets in `us-east-1`, ensuring **unique names** (e.g., append your initials or a random string to avoid conflicts).
 
-Trusted entity type: AWS service -> Lambda.
+    * `market-data-landing-zone-YOURUNIQUEID` (Keep "Block all public access" checked)
+    * `processed-data-store-YOURUNIQUEID` (Keep "Block all public access" checked)
+    * `lambda-deployment-package-YOURUNIQUEID` (Keep "Block all public access" checked)
+    * `retail-pricing-agent-ai-frontend-YOURUNIQUEID` (For frontend deployment later, **"Block all public access" should be UNCHECKED**)
 
-Permissions: Attach the following AWS managed policies:
+#### 3. Create DynamoDB Tables (6 total)
 
-AWSLambdaBasicExecutionRole
+1.  Go to **DynamoDB** -> **Tables** -> **Create table**.
+2.  Create all tables in `us-east-1` with **On-demand capacity**.
 
-AmazonS3FullAccess
+    * `retail-market-data`: **Partition key**: `sku_region_pk` (String), **Sort key**: `timestamp` (String)
+    * `retail-inventory`: **Partition key**: `sku_region_pk` (String)
+    * `retail-demand-forecasts`: **Partition key**: `sku_region_pk` (String), **Sort key**: `forecast_date` (String)
+    * `retail-customer-profiles`: **Partition key**: `customer_id` (String)
+    * `retail-pricing-promo-recommendations`: **Partition key**: `sku_region_pk` (String), **Sort key**: `timestamp` (String)
+    * `retail-price-sync-logs`: **Partition key**: `sku_region_pk` (String), **Sort key**: `timestamp` (String)
 
-AmazonDynamoDBFullAccess
+#### 4. Enable Amazon Bedrock Model Access
 
-AmazonBedrockFullAccess
+1.  Navigate to **Amazon Bedrock** -> **Model access**.
+2.  Click "**Manage model access**".
+3.  Request access for **Anthropic Claude 3 Sonnet**.
 
-AWSStepFunctionsFullAccess
+#### 5. Create Step Functions State Machine (`RetailPricingOptimizationWorkflow`)
 
-Role name: RetailAgentLambdaRole.
+1.  Go to **Step Functions** -> **State machines** -> **Create state machine**.
+2.  **Authoring method**: `Design your workflow visually` -> `Standard`.
+3.  **State machine name**: `RetailPricingOptimizationWorkflow`.
+4.  **Permissions**: Choose "Use an existing role" -> Select `RetailAgentLambdaRole`.
+5.  **Definition (Code tab)**: Paste the Amazon States Language (ASL) definition for your workflow here (you'll need to obtain this from your project's Step Functions design or previous instructions), ensuring you replace `YOUR_ACCOUNT_ID` with your actual 12-digit AWS account ID.
+6.  Create the state machine.
+7.  Copy its **ARN** (e.g., `arn:aws:states:us-east-1:123456789012:stateMachine:RetailPricingOptimizationWorkflow`). You will paste this ARN into the `STEP_FUNCTIONS_STATE_MACHINE_ARN` variable in your local `.env` file.
 
-Complete the role creation.
+### Run Your Local Application and Test Connection to AWS
 
-Create S3 Buckets (4 total):
+#### 1. Create and Activate Python Virtual Environment
 
-Go to S3 -> Create bucket.
+1.  Navigate to your project root (`retail-pricing-agent-ai/`).
+2.  Create a virtual environment:
 
-Create these four buckets in us-east-1, ensuring unique names (e.g., append your initials or a random string to avoid conflicts).
+    ```bash
+    python -m venv retailenv
+    ```
 
-market-data-landing-zone-YOURUNIQUEID (Keep "Block all public access" checked)
+3.  Activate it:
 
-processed-data-store-YOURUNIQUEID (Keep "Block all public access" checked)
+    * **Windows (PowerShell/CMD)**:
+        ```bash
+        .\retailenv\Scripts\activate
+        ```
+    * **Linux/macOS (Bash)**:
+        ```bash
+        source retailenv/bin/activate
+        ```
 
-lambda-deployment-package-YOURUNIQUEID (Keep "Block all public access" checked)
+#### 2. Update Your Local `.env` File
 
-retail-pricing-agent-ai-frontend-YOURUNIQUEID (For frontend deployment later, "Block all public access" should be UNCHECKED)
+Open `retail-pricing-agent-ai/.env`. Update the following variables with your specific values (especially the unique S3 bucket names and your Step Functions ARN):
 
-Create DynamoDB Tables (6 total):
-
-Go to DynamoDB -> Tables -> Create table.
-
-Create all tables in us-east-1 with On-demand capacity.
-
-retail-market-data: Partition key: sku_region_pk (String), Sort key: timestamp (String)
-
-retail-inventory: Partition key: sku_region_pk (String)
-
-retail-demand-forecasts: Partition key: sku_region_pk (String), Sort key: forecast_date (String)
-
-retail-customer-profiles: Partition key: customer_id (String)
-
-retail-pricing-promo-recommendations: Partition key: sku_region_pk (String), Sort key: timestamp (String)
-
-retail-price-sync-logs: Partition key: sku_region_pk (String), Sort key: timestamp (String)
-
-Enable Amazon Bedrock Model Access:
-
-Navigate to Amazon Bedrock -> **Model access`.
-
-Click "Manage model access".
-
-Request access for Anthropic Claude 3 Sonnet.
-
-Create Step Functions State Machine (RetailPricingOptimizationWorkflow):
-
-Go to Step Functions -> State machines -> Create state machine.
-
-Authoring method: Design your workflow visually -> Standard.
-
-State machine name: RetailPricingOptimizationWorkflow.
-
-Permissions: Choose "Use an existing role" -> Select RetailAgentLambdaRole.
-
-Definition (Code tab): Paste the Amazon States Language (ASL) definition for your workflow here (you'll need to obtain this from your project's Step Functions design or previous instructions), ensuring you replace YOUR_ACCOUNT_ID with your actual 12-digit AWS account ID.
-
-Create the state machine.
-
-Copy its ARN (e.g., arn:aws:states:us-east-1:123456789012:stateMachine:RetailPricingOptimizationWorkflow). You will paste this ARN into the STEP_FUNCTIONS_STATE_MACHINE_ARN variable in your local .env file.
-
-Run Your Local Application and Test Connection to AWS
-Create and Activate Python Virtual Environment:
-
-Navigate to your project root (retail-pricing-agent-ai/).
-
-Create a virtual environment:
-
-Bash
-
-python -m venv retailenv
-Activate it:
-
-Windows (Command Prompt/PowerShell):
-
-DOS
-
-.\retailenv\Scripts\activate
-Linux/macOS (Bash/Zsh):
-
-Bash
-
-source retailenv/bin/activate
-Update Your Local .env File:
-
-Open retail-pricing-agent-ai/.env.
-
-Update the following variables with your specific values (especially the unique S3 bucket names and your Step Functions ARN):
-
-Code snippet
-
+```ini
 # AWS Configuration
 AWS_REGION=us-east-1
 
@@ -219,12 +193,12 @@ PRICE_SYNC_LOG_TABLE=retail-price-sync-logs
 BEDROCK_MODEL_ID=anthropic.claude-3-sonnet-20240229-v1:0
 
 # Mock API Endpoint (This remains LOCAL, your local Python backend will use this)
-MOCK_ECOMMERCE_API_ENDPOINT=http://127.0.0.1:5000/mock-api
+MOCK_ECOMMERCE_API_ENDPOINT=[http://127.0.0.1:5000/mock-api](http://127.0.0.1:5000/mock-api)
 
 # Step Functions State Machine ARN (UPDATE THIS WITH YOUR ACTUAL ARN FROM AWS CONSOLE)
 STEP_FUNCTIONS_STATE_MACHINE_ARN=arn:aws:states:us-east-1:YOUR_ACCOUNT_ID:stateMachine:RetailPricingOptimizationWorkflow
-Install Python Dependencies:
 
+3. Install Python Dependencies
 Ensure your virtual environment is active.
 
 From the project root (retail-pricing-agent-ai/), run:
@@ -237,8 +211,7 @@ For each subfolder within retail-pricing-agent-ai/lambda_functions/ (e.g., marke
 Bash
 
 pip install -r requirements.txt
-Install Node.js Dependencies:
-
+4. Install Node.js Dependencies
 Navigate to retail-pricing-agent-ai/frontend/.
 
 Run:
@@ -246,8 +219,7 @@ Run:
 Bash
 
 npm install
-Start Your Local Python Backend (main.py):
-
+5. Start Your Local Python Backend (main.py)
 Open your first Command Prompt/PowerShell/Terminal window.
 
 Navigate to the project root (retail-pricing-agent-ai/).
@@ -261,8 +233,7 @@ Bash
 python main.py
 Keep this window open and running.
 
-Start Your Local React Frontend:
-
+6. Start Your Local React Frontend
 Open a second Command Prompt/PowerShell/Terminal window.
 
 Navigate to retail-pricing-agent-ai/frontend/.
@@ -274,11 +245,8 @@ Bash
 npm start
 Keep this window open. Your default web browser should automatically open to http://localhost:1234.
 
-Populate Initial Data in AWS DynamoDB (Crucial):
-
-Go to the AWS DynamoDB Console.
-
-For the retail-inventory, retail-customer-profiles, and retail-market-data tables, add at least 1-3 items each manually. Use the DynamoDB JSON format for item creation.
+7. Populate Initial Data in AWS DynamoDB (Crucial)
+Go to the AWS DynamoDB Console. For the retail-inventory, retail-customer-profiles, and retail-market-data tables, add at least 1-3 items each manually. Use the DynamoDB JSON format for item creation.
 
 Example for retail-inventory:
 
@@ -309,14 +277,10 @@ JSON
 }
 Note: While dummy data is available in the data/ folder, manual entry into DynamoDB is essential for the application to interact with live cloud resources from the start.
 
-Verify UI Data Fetching:
+8. Verify UI Data Fetching
+Refresh your browser at http://localhost:1234. Check the "Products" tab and "Dashboard" for data being fetched and displayed from your DynamoDB tables.
 
-Refresh your browser at http://localhost:1234.
-
-Check the "Products" tab and "Dashboard" for data being fetched and displayed from your DynamoDB tables.
-
-Trigger Agent Workflow:
-
+9. Trigger Agent Workflow
 On the "Dashboard" tab of your running application, click the "Trigger Agent Run" button.
 
 Observe your main.py console: Look for DEBUG messages from each agent, indicating successful attempts to write to DynamoDB.
@@ -325,8 +289,7 @@ Observe your AWS Step Functions Console: You should see a new execution start fo
 
 Verify AWS DynamoDB Console: Check retail-market-data, retail-demand-forecasts, retail-pricing-promo-recommendations, and retail-price-sync-logs for newly generated data.
 
-Test "AI Promos":
-
+10. Test "AI Promos"
 Go to the "AI Promos" tab in your application.
 
 Enter a prompt, e.g., "Suggest a flash sale for a gaming laptop for tech enthusiasts."
@@ -337,10 +300,9 @@ Observe your main.py console: You should see output related to the Bedrock inter
 
 Observe your UI: The generated promotion text should appear.
 
-Test "Apply Recommendation":
+11. Test "Apply Recommendation"
+If recommendations have appeared on the "Recommendations" tab, click "Apply Recommendation" for one of them.
 
-If recommendations have appeared on the "Recommendations" tab, click "Apply Recommendation".
+Observe your main.py console: Look for price synchronization logs.
 
-Observe your main.py console: Look for sync logs.
-
-Verify in DynamoDB: Check retail-pricing-promo-recommendations (status change) and retail-inventory (price update).
+Verify in DynamoDB: Check the retail-pricing-promo-recommendations table for a status change on the item and potentially retail-inventory for a simulated price update.
