@@ -1,4 +1,4 @@
-Agentic AI Retail Optimizer
+Agentic AI Retail Pricing Agnet
 🚀 Project Overview
 The Agentic AI Retail Optimizer is a demonstration of a modern, cloud-native application designed to revolutionize retail pricing and promotion strategies. It leverages intelligent AI agents, serverless architecture on AWS, and real-time data processing to provide dynamic price recommendations and personalized promotional ideas. This project showcases how AI-driven automation can enhance business agility and profitability in the retail sector.
 
@@ -64,3 +64,12 @@ retail-pricing-optimizer/
 ├── requirements.txt                   # Python dependencies for main.py
 └── .env                               # Global environment variables (AWS credentials, table names, ARNs)
 ``````
+
+### Dashboard an Demo
+![Agentic AI Retail Pricing Agnet Dashboard](https://github.com/samhaldia/retail-pricing-agent-ai/blob/main/Retail-AI.PNG "Agentic AI Retail Pricing Agnet")
+
+![Agentic AI Retail Pricing Agnet Products Listing](https://github.com/samhaldia/retail-pricing-agent-ai/blob/main/Retail-AI-Products.PNG "Agentic AI Retail Pricing Agnet Products Listing")
+
+![Agentic AI Retail Pricing Agnet Recommendations](https://github.com/samhaldia/retail-pricing-agent-ai/blob/main/Retail-AI-Products-Recommend.PNG "Agentic AI Retail Pricing Agnet Recommendations")
+
+![Agentic AI Retail Pricing Agnet Idea Generation](https://github.com/samhaldia/retail-pricing-agent-ai/blob/main/Retail-AI-Products-Ideas.PNG "Agentic AI Retail Pricing Agnet Idea Generation")
