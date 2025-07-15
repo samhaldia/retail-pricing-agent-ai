@@ -1,10 +1,10 @@
-# 🛍️ Agentic AI Retail Pricing Optimizer
+# 🛍️ Autonomous Retail Pricing & Promotion Agent
 
 ---
 
 ## 🚀 Project Overview
 
-The Agentic AI Retail Pricing Optimizer is a cutting-edge, cloud-native application designed to transform retail pricing and promotion strategies. By leveraging intelligent AI agents, a robust serverless architecture on AWS, and real-time data processing, this project delivers dynamic price recommendations and personalized promotional ideas. It's a powerful demonstration of how AI-driven automation can significantly enhance business agility and profitability within the competitive retail sector.
+The Retail Pricing & Promotion Agent is a demonstration of a modern, cloud-native application designed to revolutionize retail pricing and promotion strategies. It leverages intelligent AI agents, serverless architecture on AWS, and real-time data processing to provide dynamic price recommendations and personalized promotional ideas. This project showcases how AI-driven automation can enhance business agility and profitability in the retail sector.
 
 ---
 
