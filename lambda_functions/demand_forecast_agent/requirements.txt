@@ -1,0 +1,3 @@
+# retail-pricing-agent-ai-ingestor-test/lambda_functions/market_data_ingestor/requirements.txt
+#boto3
+python-dotenv
