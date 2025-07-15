@@ -1,6 +1,6 @@
 🛍️ Agentic AI Retail Pricing Optimizer
 🚀 Project Overview
-The Agentic AI Retail Pricing Optimizer is a cutting-edge, cloud-native application designed to transform retail pricing and promotion strategies. By leveraging intelligent AI agents, a robust serverless architecture on AWS, and real-time data processing, this project delivers dynamic price recommendations and personalized promotional ideas. It's a powerful demonstration of how AI-driven automation can significantly enhance business agility and profitability within the competitive retail sector.
+The Agentic AI Retail Pricing Optimizer is a cutting-edge, cloud-native application designed to transform retail pricing and promotion strategies. It leverages intelligent AI agents, a robust serverless architecture on AWS, and real-time data processing to deliver dynamic price recommendations and personalized promotional ideas. This project showcases how AI-driven automation can significantly enhance business agility and profitability in the competitive retail sector.
 
 ✨ Features
 This application provides the following core functionalities:
@@ -72,10 +72,7 @@ retail-pricing-agent-ai/
 
 ![Agentic AI Retail Pricing Agnet Idea Generation](https://github.com/samhaldia/retail-pricing-agent-ai/blob/main/Retail-AI-Products-Ideas.PNG "Agentic AI Retail Pricing Agnet Idea Generation")
 
-
-
-
-
+Export to Sheets
 🛠️ Setup Guide: Running Locally Connected to AWS
 Follow these comprehensive steps to get the application running on your local machine, seamlessly interacting with live AWS resources.
 
@@ -149,7 +146,7 @@ retail-price-sync-logs: Partition key: sku_region_pk (String), Sort key: timesta
 
 Enable Amazon Bedrock Model Access:
 
-Navigate to Amazon Bedrock -> Model access.
+Navigate to Amazon Bedrock -> **Model access`.
 
 Click "Manage model access".
 
@@ -178,23 +175,28 @@ Navigate to your project root (retail-pricing-agent-ai/).
 
 Create a virtual environment:
 
-python -m venv retailenv
+Bash
 
+python -m venv retailenv
 Activate it:
 
-Windows (PowerShell/CMD):
+Windows (Command Prompt/PowerShell):
+
+DOS
 
 .\retailenv\Scripts\activate
+Linux/macOS (Bash/Zsh):
 
-Linux/macOS (Bash):
+Bash
 
 source retailenv/bin/activate
-
 Update Your Local .env File:
 
 Open retail-pricing-agent-ai/.env.
 
 Update the following variables with your specific values (especially the unique S3 bucket names and your Step Functions ARN):
+
+Code snippet
 
 # AWS Configuration
 AWS_REGION=us-east-1
@@ -221,27 +223,29 @@ MOCK_ECOMMERCE_API_ENDPOINT=http://127.0.0.1:5000/mock-api
 
 # Step Functions State Machine ARN (UPDATE THIS WITH YOUR ACTUAL ARN FROM AWS CONSOLE)
 STEP_FUNCTIONS_STATE_MACHINE_ARN=arn:aws:states:us-east-1:YOUR_ACCOUNT_ID:stateMachine:RetailPricingOptimizationWorkflow
-
 Install Python Dependencies:
 
 Ensure your virtual environment is active.
 
 From the project root (retail-pricing-agent-ai/), run:
 
-pip install -r requirements.txt
+Bash
 
+pip install -r requirements.txt
 For each subfolder within retail-pricing-agent-ai/lambda_functions/ (e.g., market_data_ingestor, demand_forecast_agent, etc.), navigate into it and run:
 
-pip install -r requirements.txt
+Bash
 
+pip install -r requirements.txt
 Install Node.js Dependencies:
 
 Navigate to retail-pricing-agent-ai/frontend/.
 
 Run:
 
-npm install
+Bash
 
+npm install
 Start Your Local Python Backend (main.py):
 
 Open your first Command Prompt/PowerShell/Terminal window.
@@ -252,8 +256,9 @@ Ensure your virtual environment is active.
 
 Run:
 
-python main.py
+Bash
 
+python main.py
 Keep this window open and running.
 
 Start Your Local React Frontend:
@@ -264,8 +269,9 @@ Navigate to retail-pricing-agent-ai/frontend/.
 
 Run:
 
-npm start
+Bash
 
+npm start
 Keep this window open. Your default web browser should automatically open to http://localhost:1234.
 
 Populate Initial Data in AWS DynamoDB (Crucial):
@@ -276,6 +282,8 @@ For the retail-inventory, retail-customer-profiles, and retail-market-data table
 
 Example for retail-inventory:
 
+JSON
+
 {
     "sku_region_pk": { "S": "P001_US-EAST" },
     "sku": { "S": "P001" },
@@ -284,8 +292,9 @@ Example for retail-inventory:
     "inventory": { "N": "120" },
     "last_updated": { "S": "2025-07-15T10:00:00Z" }
 }
-
 Example for retail-customer-profiles:
+
+JSON
 
 {
     "customer_id": { "S": "C101" },
@@ -298,7 +307,6 @@ Example for retail-customer-profiles:
     },
     "segment": { "S": "Loyalty Tier A" }
 }
-
 Note: While dummy data is available in the data/ folder, manual entry into DynamoDB is essential for the application to interact with live cloud resources from the start.
 
 Verify UI Data Fetching:
@@ -331,8 +339,8 @@ Observe your UI: The generated promotion text should appear.
 
 Test "Apply Recommendation":
 
-If recommendations have appeared on the "Recommendations" tab, click "Apply Recommendation" for one of them.
+If recommendations have appeared on the "Recommendations" tab, click "Apply Recommendation".
 
-Observe your main.py console: Look for price synchronization logs.
+Observe your main.py console: Look for sync logs.
 
-Verify in DynamoDB: Check the retail-pricing-promo-recommendations table for a status change on the item and potentially retail-inventory for a simulated price update.
+Verify in DynamoDB: Check retail-pricing-promo-recommendations (status change) and retail-inventory (price update).
