@@ -19,31 +19,27 @@ inventory_table = dynamodb.Table(os.getenv("INVENTORY_TABLE", "retail-inventory"
 customer_profiles_table = dynamodb.Table(os.getenv("CUSTOMER_PROFILES_TABLE", "retail-customer-profiles"))
 
 bedrock_runtime = boto3.client('bedrock-runtime', region_name=os.getenv("AWS_REGION", "us-east-1"))
+sns_client = boto3.client('sns', region_name=os.getenv("AWS_REGION", "us-east-1"))
 bedrock_model_id = os.getenv("BEDROCK_MODEL_ID", "anthropic.claude-3-sonnet-20240229-v1:0")
+sns_promotion_topic_arn = os.getenv("SNS_PROMOTION_TOPIC_ARN") 
 
-def _invoke_bedrock_model(user_prompt_text): # Renamed 'prompt' to 'user_prompt_text' for clarity
+def _invoke_bedrock_model(prompt_text): # This is for general text generation (used by AIPromoGenerator)
     """
-    Invokes an Amazon Bedrock model to generate promotional content.
-    Uses a system prompt to set context.
+    Invokes an Amazon Bedrock model for general text generation (e.g., promo copy).
+    Returns raw text response.
     """
     try:
-        # Define a strong system prompt to set the context
-        system_prompt = (
-            "You are an expert retail marketing strategist specializing in promotions and sales. "
-            "Your goal is to generate creative, concise, and compelling promotional ideas for e-commerce products. "
-            "Focus on discounts, bundles, limited-time offers, and engaging marketing copy. "
-            "Always provide a specific offer or call to action. Do not give career advice."
-        )
+        messages = [
+            {"role": "user", "content": [{"type": "text", "text": prompt_text}]}
+        ]
 
         body = json.dumps({
             "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 200,
-            "messages": [
-                {"role": "user", "content": [{"type": "text", "text": system_prompt + "\n\n" + user_prompt_text}]} # Combine system and user prompt
-            ]
+            "max_tokens": 200, # Max 200 tokens for promo copy
+            "messages": messages
         })
         
-        print(f"DEBUG: Invoking Bedrock model {bedrock_model_id} with combined prompt (first 100 chars): {body[:100]}...")
+        print(f"DEBUG: Invoking Bedrock for general text with prompt (first 100 chars): {body[:100]}...")
         response = bedrock_runtime.invoke_model(
             modelId=bedrock_model_id,
             contentType="application/json",
@@ -52,26 +48,121 @@ def _invoke_bedrock_model(user_prompt_text): # Renamed 'prompt' to 'user_prompt_
         )
         
         response_body = json.loads(response.get('body').read())
-        if 'content' in response_body and len(response_body['content']) > 0 and 'text' in response_body['content'][0]:
-            generated_text = response_body['content'][0]['text']
-            print(f"DEBUG: Bedrock generated text: {generated_text[:100]}...")
-            return generated_text
-        else:
-            print(f"WARN: Bedrock response missing expected 'content' or 'text': {response_body}")
-            return "Bedrock response format unexpected."
+        # --- NEW DEBUG PRINTS FOR BEDROCK RESPONSE ---
+        print(f"DEBUG: Raw Bedrock response body for general text: {json.dumps(response_body, indent=2)}")
+        # --- END NEW DEBUG PRINTS ---
+
+        # Extract the generated text from the response
+        generated_text = response_body['content'][0]['text']
+        print(f"DEBUG: Extracted generated text from Bedrock: {generated_text[:100]}...") # Print first 100 chars
+        return generated_text
+
     except ClientError as e:
-        print(f"ERROR: Bedrock Client Error: {e.response['Error']['Message']}")
-        return "Error generating promo text with Bedrock."
+        print(f"ERROR: Bedrock Client Error for general text generation: {e.response['Error']['Message']}")
+        return f"Error: {e.response['Error']['Message']}"
     except Exception as e:
-        print(f"ERROR: Unexpected error invoking Bedrock: {e}")
-        return "Error generating promo text with Bedrock."
+        import traceback # Import traceback here for local debugging
+        print(f"ERROR: Unexpected error invoking Bedrock for general text generation: {e}")
+        print(traceback.format_exc()) # Print full traceback
+        return f"Error: {str(e)}"
+
+def _invoke_bedrock_model_for_recommendation(data_context_prompt): # This is for structured recommendations
+    """
+    Invokes an Amazon Bedrock model to generate pricing/promotion recommendations
+    with reasoning, expecting a structured JSON output.
+    """
+    try:
+        system_prompt = (
+            "You are an expert retail pricing and promotion strategist. "
+            "Your primary goal is to recommend optimal price adjustments or promotion strategies "
+            "to maximize revenue, clear inventory, or remain competitive. "
+            "Analyze the provided product data, market conditions, and demand forecasts. "
+            "If a price change is beneficial, recommend a specific 'recommended_price' that is different from 'current_price'. "
+            "If the current price is truly optimal, recommend the 'current_price'. "
+            "Provide your recommendation and detailed reasoning in a JSON format. "
+            "The JSON should contain: "
+            "'recommended_price' (float), "
+            "'recommendation_type' (string, MUST be 'price_adjustment' for price changes, or 'flash_sale', 'bundle_offer' for promotions), "
+            "'reason' (string explaining the decision), and "
+            "'promo_copy' (string, a short engaging marketing message if applicable, otherwise empty string). "
+            "Always output valid JSON only. Do not include any conversational text outside the JSON."
+        )
+
+        user_prompt = f"Analyze the following product context and provide an optimal strategy:\n\n{data_context_prompt}"
+
+        messages = [
+            {"role": "user", "content": [{"type": "text", "text": system_prompt + "\n\n" + user_prompt}]}
+        ]
+
+        body = json.dumps({
+            "anthropic_version": "bedrock-2023-05-31",
+            "max_tokens": 500, 
+            "messages": messages
+        })
+        
+        print(f"DEBUG: Invoking Bedrock for recommendation with prompt (first 200 chars): {body[:200]}...")
+        response = bedrock_runtime.invoke_model(
+            modelId=bedrock_model_id,
+            contentType="application/json",
+            accept="application/json",
+            body=body
+        )
+        
+        response_body = json.loads(response.get('body').read())
+        generated_text = response_body['content'][0]['text']
+        print(f"DEBUG: Bedrock raw recommendation response: {generated_text}")
+
+        try:
+            llm_recommendation = json.loads(generated_text)
+            return llm_recommendation
+        except json.JSONDecodeError:
+            print(f"ERROR: Bedrock did not return valid JSON for recommendation: {generated_text}")
+            return None
+
+    except ClientError as e:
+        print(f"ERROR: Bedrock Client Error for recommendation: {e.response['Error']['Message']}")
+        return None
+    except Exception as e:
+        print(f"ERROR: Unexpected error invoking Bedrock for recommendation: {e}")
+        return None
+
+def _send_customer_alert(customer_contact_info, message):
+    """
+    Sends an alert to a customer using AWS SNS.
+    customer_contact_info can be a phone number for SMS or an email address.
+    """
+    try:
+        if not sns_promotion_topic_arn:
+            print("WARN: SNS_PROMOTION_TOPIC_ARN not set in .env. Skipping customer alert.")
+            return False
+
+        if '@' in customer_contact_info: 
+            print(f"DEBUG: Attempting to send email alert via SNS topic {sns_promotion_topic_arn} to {customer_contact_info}")
+            sns_client.publish(
+                TopicArn=sns_promotion_topic_arn,
+                Message=message,
+                Subject="Exclusive Promotion Alert!"
+            )
+            print(f"DEBUG: Email alert sent to topic {sns_promotion_topic_arn} for {customer_contact_info}")
+        else: 
+            print(f"DEBUG: Attempting to send SMS alert to {customer_contact_info}")
+            sns_client.publish(
+                PhoneNumber=customer_contact_info,
+                Message=message
+            )
+            print(f"DEBUG: SMS alert sent to {customer_contact_info}")
+        return True
+    except ClientError as e:
+        print(f"ERROR: SNS Client Error sending alert to {customer_contact_info}: {e.response['Error']['Message']}")
+        return False
+    except Exception as e:
+        print(f"ERROR: Unexpected error sending alert to {customer_contact_info}: {e}")
+        return False
 
 def lambda_handler(event, context):
     """
     Lambda function for the Promotion Strategy Agent.
-    Reads forecasts, inventory, and customer data to make recommendations
-    and generate personalized promotion ideas using Amazon Bedrock.
-    Triggered by Step Functions.
+    Now uses Amazon Bedrock for core pricing/promotion recommendations.
     """
     print("Promotion Strategy Agent triggered.")
 
@@ -97,7 +188,11 @@ def lambda_handler(event, context):
         promotion_ideas = []
 
         for current_product_info in all_inventory_items:
-            sku = current_product_info['sku']
+            sku = current_product_info.get('sku') 
+            if not sku:
+                print(f"WARN: Skipping inventory item due to missing 'sku' attribute: {current_product_info}")
+                continue
+
             sku_region_pk = f"{sku}_{current_aws_region}"
             
             current_price = float(current_product_info.get('current_stock', Decimal('1.0')))
@@ -116,85 +211,116 @@ def lambda_handler(event, context):
             
             print(f"DEBUG:   Demand Factor: {demand_factor}, Competitor Price: {competitor_price}")
 
-            new_price = current_price
-            reason = "Optimal price based on current conditions."
+            # --- Prepare comprehensive data context for LLM ---
+            data_context = {
+                "sku": sku,
+                "current_price": current_price,
+                "inventory": inventory,
+                "cost_of_goods": cost,
+                "latest_demand_factor": demand_factor,
+                "latest_competitor_price": competitor_price,
+                "customer_segments_available": [c.get('segment') for c in customer_profiles if c.get('segment')],
+                "business_goal_priority": "maximize_revenue_and_clear_excess_inventory_and_be_competitive" 
+            }
+            context_prompt = json.dumps(data_context, indent=2)
 
-            if demand_factor > 1.1 and inventory > 50:
-                new_price = round(current_price * 1.05, 2)
-                reason = f"High demand detected ({demand_factor}). Increasing price to maximize revenue."
-            elif demand_factor < 0.9 and inventory > 150:
-                new_price = round(current_price * 0.9, 2)
-                reason = f"Low demand detected ({demand_factor}). Decreasing price to clear inventory."
-            elif inventory < 30 and demand_factor > 1.0:
-                if current_price < cost * 1.3:
-                    new_price = round(current_price * 1.1, 2)
-                    reason = f"Critical low stock ({inventory}). Increasing price to manage demand and maximize profit."
-            elif competitor_price is not None and competitor_price < current_price * 0.95:
-                new_price = round(competitor_price * 0.98, 2)
-                reason = f"Competitor price (${competitor_price}) is significantly lower. Adjusting price to remain competitive."
-            
-            if new_price != current_price:
-                rec_id = f"price_{sku}_{int(time.time())}"
-                pricing_recommendation_item = {
-                    'sku_region_pk': sku_region_pk,
-                    'timestamp': time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                    'id': rec_id,
-                    'sku': sku,
-                    'original_price': Decimal(str(current_price)),
-                    'recommended_price': Decimal(str(new_price)),
-                    'reason': reason,
-                    'type': 'price_adjustment',
-                    'status': 'pending_review',
-                }
-                pricing_recommendations.append(pricing_recommendation_item)
-                print(f"DEBUG: Attempting to put price recommendation to {recommendations_table.name}: {rec_id}, New Price: {new_price}")
-                try:
-                    recommendations_table.put_item(Item=pricing_recommendation_item)
-                    print(f"DEBUG: Successfully put price recommendation {rec_id}")
-                except ClientError as e:
-                    print(f"ERROR: ClientError putting price recommendation for SKU {sku_region_pk}: {e.response['Error']['Message']}")
-                except Exception as e:
-                    print(f"ERROR: Unexpected error putting price recommendation for SKU {sku_region_pk}: {e}")
-            else:
-                print(f"DEBUG: No price change recommended for SKU {sku_region_pk}.")
+            # --- Invoke Bedrock for the core recommendation ---
+            llm_recommendation_output = _invoke_bedrock_model_for_recommendation(context_prompt)
 
-            for customer in customer_profiles:
-                if random.random() < 0.2: # 20% chance to generate promo per customer segment
-                    customer_segment = customer['segment']
-                    customer_prefs = ", ".join(customer.get('preferences', []))
-                    
-                    # Construct the user prompt for the LLM
-                    user_prompt_for_llm = (
-                        f"Generate a concise, engaging promotion idea for product SKU '{sku}' "
-                        f"targeting '{customer_segment}' customers (who like {customer_prefs}). "
-                        f"Current inventory: {inventory} units. Demand factor: {demand_factor}. "
-                        f"Focus on driving sales or clearing inventory. "
-                        f"Suggest a specific discount or offer. Max 50 words."
-                    )
-                    
-                    llm_promo_text = _invoke_bedrock_model(user_prompt_for_llm) # Pass the user prompt
-                    
-                    promo_id = f"promo_{sku}_{customer_segment}_{int(time.time())}"
-                    promotion_idea_item = {
+            if llm_recommendation_output:
+                new_price = float(llm_recommendation_output.get('recommended_price', current_price))
+                recommendation_reason = llm_recommendation_output.get('reason', "LLM provided no specific reason.")
+                recommendation_type = llm_recommendation_output.get('recommendation_type', 'price_adjustment')
+                promo_copy = llm_recommendation_output.get('promo_copy', '')
+
+                if new_price != current_price or recommendation_type != 'price_adjustment': 
+                    rec_id = f"llm_price_{sku}_{int(time.time())}"
+                    pricing_recommendation_item = {
                         'sku_region_pk': sku_region_pk,
                         'timestamp': time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                        'id': promo_id,
+                        'id': rec_id,
                         'sku': sku,
-                        'customer_segment': customer_segment,
-                        'promo_text': llm_promo_text,
-                        'type': 'promotion_idea',
-                        'status': 'draft',
+                        'original_price': Decimal(str(current_price)),
+                        'recommended_price': Decimal(str(new_price)),
+                        'reason': recommendation_reason,
+                        'type': recommendation_type, 
+                        'promo_copy': promo_copy, 
+                        'status': 'pending_review', 
                     }
-                    promotion_ideas.append(promotion_idea_item)
-                    print(f"DEBUG: Attempting to put promo idea to {recommendations_table.name}: {promo_id}")
+                    pricing_recommendations.append(pricing_recommendation_item)
+                    print(f"DEBUG: Attempting to put LLM-generated recommendation to {recommendations_table.name}: {rec_id}, New Price: {new_price}, Type: {recommendation_type}")
                     try:
-                        recommendations_table.put_item(Item=promotion_idea_item)
-                        print(f"DEBUG: Successfully put promo idea {promo_id}")
+                        recommendations_table.put_item(Item=pricing_recommendation_item)
+                        print(f"DEBUG: Successfully put LLM-generated recommendation {rec_id}")
                     except ClientError as e:
-                        print(f"ERROR: ClientError putting promo idea for SKU {sku_region_pk}, segment {customer_segment}: {e.response['Error']['Message']}")
+                        print(f"ERROR: ClientError putting LLM recommendation for SKU {sku_region_pk}: {e.response['Error']['Message']}")
                     except Exception as e:
-                        print(f"ERROR: Unexpected error putting promo idea for SKU {sku_region_pk}, segment {customer_segment}: {e}")
-                    break # Only one promo per SKU per customer segment for simplicity in demo
+                        print(f"ERROR: Unexpected error putting LLM recommendation for SKU {sku_region_pk}: {e}")
+                else:
+                    print(f"DEBUG: LLM recommended no significant price change or specific promo for SKU {sku_region_pk} (type: {recommendation_type}, price: {new_price}).")
+
+                # --- Handle Promotion Idea Generation and Alerting ---
+                if promo_copy:
+                    llm_promo_text = promo_copy
+                    print(f"DEBUG: Using promo copy directly from LLM's recommendation output.")
+                else:
+                    print(f"DEBUG: LLM did not provide promo_copy. Attempting to generate separate creative text.")
+                    user_prompt_for_llm_creative = (
+                        f"Generate a concise, engaging marketing message for product SKU '{sku}'. "
+                        f"Current inventory: {inventory} units. Demand factor: {demand_factor}. "
+                        f"Suggest a specific discount or offer. Max 50 words."
+                    )
+                    # Use the _invoke_bedrock_model function defined above for simple text generation
+                    llm_promo_text = _invoke_bedrock_model(user_prompt_for_llm_creative)
+
+
+                if llm_promo_text and "Error:" not in llm_promo_text: # Check for actual content, not just error string
+                    for customer in customer_profiles:
+                        if random.random() < 0.2: 
+                            customer_segment = customer['segment']
+                            customer_prefs = ", ".join(customer.get('preferences', []))
+                            customer_contact = customer.get('email') or customer.get('phone_number') 
+                            
+                            promo_id = f"promo_{sku}_{customer['customer_id']}_{int(time.time())}"
+                            promotion_idea_item = {
+                                'sku_region_pk': sku_region_pk,
+                                'timestamp': time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                                'id': promo_id,
+                                'sku': sku,
+                                'customer_id': customer['customer_id'],
+                                'customer_segment': customer_segment,
+                                'promo_text': llm_promo_text,
+                                'type': 'promotion_idea', 
+                                'status': 'draft', 
+                            }
+                            promotion_ideas.append(promotion_idea_item) 
+                            print(f"DEBUG: Attempting to put promo idea to {recommendations_table.name}: {promo_id}")
+                            try:
+                                recommendations_table.put_item(Item=promotion_idea_item)
+                                print(f"DEBUG: Successfully put promo idea {promo_id}")
+                                
+                                if customer_contact and llm_promo_text:
+                                    alert_message = f"📢 Special Offer for You!\nProduct: {sku}\nOffer: {llm_promo_text}\nDon't miss out!"
+                                    if _send_customer_alert(customer_contact, alert_message):
+                                        recommendations_table.update_item(
+                                            Key={'sku_region_pk': sku_region_pk, 'timestamp': promotion_idea_item['timestamp']},
+                                            UpdateExpression="SET #status = :sent_status",
+                                            ExpressionAttributeNames={'#status': 'status'},
+                                            ExpressionAttributeValues={':sent_status': 'sent'}
+                                        )
+                                        print(f"DEBUG: Successfully sent promotion alert for SKU {sku} to {customer_contact}. Status updated to 'sent'.")
+                                    else:
+                                        print(f"WARN: Failed to send promotion alert for SKU {sku} to {customer_contact}.")
+
+                            except ClientError as e:
+                                print(f"ERROR: ClientError putting promo idea for SKU {sku_region_pk}, segment {customer_segment}: {e.response['Error']['Message']}")
+                            except Exception as e:
+                                print(f"ERROR: Unexpected error putting promo idea for SKU {sku_region_pk}, segment {customer_segment}: {e}")
+                            break 
+                else:
+                    print(f"DEBUG: No valid promo copy generated for SKU {sku_region_pk} to send alerts.")
+            else:
+                print(f"WARN: Bedrock recommendation invocation failed or returned no valid output for SKU {sku_region_pk}.")
 
         print(f"Generated {len(pricing_recommendations)} pricing recommendations and {len(promotion_ideas)} promotion ideas.")
         return {
@@ -206,7 +332,9 @@ def lambda_handler(event, context):
             }, default=str)
         }
     except Exception as e:
+        import traceback
         print(f"ERROR: Error in Promotion Strategy Agent: {e}")
+        print(traceback.format_exc())
         return {
             'statusCode': 500,
             'body': json.dumps({'message': f'Error generating strategy recommendations: {str(e)}'})

@@ -5,7 +5,7 @@ from botocore.exceptions import ClientError
 from boto3.dynamodb.conditions import Key
 from dotenv import load_dotenv
 import time
-from decimal import Decimal # Import Decimal type
+from decimal import Decimal
 
 # Load environment variables (for local testing)
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
@@ -32,7 +32,7 @@ def lambda_handler(event, context):
 
     print(f"UI Backend triggered: {http_method} {path}")
 
-    # Set CORS headers for all responses
+    # Set CORS headers for all responses (though Flask-CORS handles this globally in main.py)
     cors_headers = {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*', # Allow all origins for hackathon demo
@@ -48,7 +48,6 @@ def lambda_handler(event, context):
             'body': ''
         }
 
-    # Get the AWS region, convert to uppercase for the PK suffix
     current_aws_region = os.getenv("AWS_REGION", "us-east-1").upper()
 
     # Fetch products and recommendations for the UI
@@ -60,6 +59,7 @@ def lambda_handler(event, context):
             print(f"DEBUG: Found {len(all_inventory_items)} inventory items.")
 
             print(f"DEBUG: Scanning {recommendations_table.name} for pending price recommendations.")
+            # Filter for price_adjustment type and pending_review status
             recommendations_response = recommendations_table.scan(
                 FilterExpression=Key('type').eq('price_adjustment') & Key('status').eq('pending_review')
             )
@@ -75,6 +75,10 @@ def lambda_handler(event, context):
             recommendations_for_ui = []
 
             for item in all_inventory_items:
+                if 'sku' not in item:
+                    print(f"WARN: Skipping inventory item due to missing 'sku' attribute: {item}")
+                    continue
+
                 sku = item['sku']
                 sku_region_pk = f"{sku}_{current_aws_region}"
                 
@@ -100,14 +104,15 @@ def lambda_handler(event, context):
                 
                 if latest_pending_rec:
                     recommended_price = float(latest_pending_rec['recommended_price'])
-                    recommendation_reason = latest_pending_rec['reason']
+                    recommendation_reason = latest_pending_rec.get('reason', "No reason provided.")
                     
                     recommendations_for_ui.append({
                         "id": latest_pending_rec['id'],
                         "sku": sku,
                         "sku_region_pk": sku_region_pk,
-                        "name": f"Product {sku}",
-                        "category": "General",
+                        "timestamp": latest_pending_rec['timestamp'], 
+                        "name": item.get('name', f"Product {sku}"), 
+                        "category": item.get('category', "General"), 
                         "currentPrice": current_price,
                         "cost": cost,
                         "inventory": inventory,
@@ -116,21 +121,22 @@ def lambda_handler(event, context):
                         "recommendedPrice": recommended_price,
                         "recommendationReason": recommendation_reason,
                         "latestDemandFactor": float(latest_forecast.get('demand_factor', Decimal('1.0'))) if latest_forecast else 1.0,
-                        "latestCompetitorPrice": float(latest_forecast.get('competitor_price', Decimal('0.0'))) if latest_forecast and latest_forecast.get('competitor_price') is not None else None
+                        "latestCompetitorPrice": float(latest_forecast.get('competitor_price', Decimal('0.0'))) if latest_forecast and latest_forecast.get('competitor_price') is not None else None,
+                        "type": latest_pending_rec['type'] # --- FIX: ADD THIS LINE ---
                     })
 
                 products_for_ui.append({
-                    "id": sku,
+                    "id": sku, 
                     "sku_region_pk": sku_region_pk,
-                    "name": f"Product {sku}",
-                    "category": "General",
+                    "name": item.get('name', f"Product {sku}"), 
+                    "category": item.get('category', "General"), 
                     "currentPrice": current_price,
                     "cost": cost,
                     "inventory": inventory,
                     "region": current_aws_region,
                     "imageUrl": f"https://placehold.co/400x300/E0F2F7/000000?text={sku}",
-                    "recommendedPrice": recommended_price,
-                    "recommendationReason": recommendation_reason,
+                    "recommendedPrice": recommended_price, 
+                    "recommendationReason": recommendation_reason, 
                     "latestDemandFactor": float(latest_forecast.get('demand_factor', Decimal('1.0'))) if latest_forecast else 1.0,
                     "latestCompetitorPrice": float(latest_forecast.get('competitor_price', Decimal('0.0'))) if latest_forecast and latest_forecast.get('competitor_price') is not None else None
                 })
@@ -141,7 +147,7 @@ def lambda_handler(event, context):
                 'body': json.dumps({
                     'products': products_for_ui,
                     'recommendations': recommendations_for_ui
-                }, default=str) # Use default=str to handle Decimal in JSON serialization
+                }, default=str) 
             }
         except ClientError as e:
             print(f"ERROR: DynamoDB Client Error fetching products: {e.response['Error']['Message']}")
@@ -151,7 +157,9 @@ def lambda_handler(event, context):
                 'body': json.dumps({'message': f'Error fetching products: {e.response["Error"]["Message"]}'})
             }
         except Exception as e:
+            import traceback
             print(f"ERROR: Unexpected error fetching products: {e}")
+            print(traceback.format_exc()) 
             return {
                 'statusCode': 500,
                 'headers': cors_headers,
@@ -180,7 +188,9 @@ def lambda_handler(event, context):
                 'body': json.dumps({'message': f'Error triggering agent run: {e.response["Error"]["Message"]}'})
             }
         except Exception as e:
+            import traceback
             print(f"ERROR: Unexpected error triggering agent run: {e}")
+            print(traceback.format_exc())
             return {
                 'statusCode': 500,
                 'headers': cors_headers,
@@ -205,7 +215,9 @@ def lambda_handler(event, context):
                 'body': json.dumps({'promo_idea': promo_text})
             }
         except Exception as e:
+            import traceback
             print(f"ERROR: Error generating promo idea: {e}")
+            print(traceback.format_exc())
             return {
                 'statusCode': 500,
                 'headers': cors_headers,
@@ -213,65 +225,74 @@ def lambda_handler(event, context):
             }
     
     # Handle applying a recommendation (update status in DynamoDB)
+    # This path is hit when the main.py /apply-recommendation route calls this handler.
     elif path == '/api/apply-recommendation' and http_method == 'POST':
         try:
             request_body = json.loads(event.get('body', '{}'))
             recommendation_id = request_body.get('recommendation_id')
             sku = request_body.get('sku')
             new_price = float(request_body.get('new_price'))
+            # Get the original recommendation object passed from the frontend
+            original_recommendation = request_body.get('original_recommendation')
 
-            if not recommendation_id or not sku or new_price is None:
+            if not recommendation_id or not sku or new_price is None or not original_recommendation:
+                print(f"WARN: Missing data for apply-recommendation: recommendation_id={recommendation_id}, sku={sku}, new_price={new_price}, original_recommendation={original_recommendation}")
                 return {
                     'statusCode': 400,
                     'headers': cors_headers,
-                    'body': json.dumps({'message': 'Missing recommendation_id, sku, or new_price'})
+                    'body': json.dumps({'message': 'Missing recommendation_id, sku, new_price, or original_recommendation'})
                 }
             
-            print(f"DEBUG: Scanning {recommendations_table.name} to find recommendation with ID: {recommendation_id}")
-            found_rec_item = None
-            scan_response = recommendations_table.scan(
-                FilterExpression=Key('id').eq(recommendation_id)
+            # --- Update recommendation status in retail-pricing-promo-recommendations to 'applied' ---
+            # Use the full key from the original_recommendation for accuracy
+            print(f"DEBUG: Updating status of recommendation {recommendation_id} to 'applied' in {recommendations_table.name}.")
+            recommendations_table.update_item(
+                Key={
+                    'sku_region_pk': original_recommendation['sku_region_pk'],
+                    'timestamp': original_recommendation['timestamp'] 
+                },
+                UpdateExpression="SET #s = :status_val",
+                ExpressionAttributeNames={'#s': 'status'},
+                ExpressionAttributeValues={':status_val': 'applied'}
             )
-            if scan_response['Items']:
-                found_rec_item = scan_response['Items'][0]
-                print(f"DEBUG: Found recommendation item: {found_rec_item}")
-            else:
-                print(f"WARN: Recommendation {recommendation_id} not found to update status.")
+            print(f"DEBUG: Recommendation {recommendation_id} status updated to 'applied'.")
 
+            # --- FIX: Update the status of the original_recommendation object in memory ---
+            # This is crucial because the RealTimePriceSyncAgent expects status 'applied'
+            # The object in memory still has its original status ('pending_review') until updated.
+            original_recommendation['status'] = 'applied'
+            # --- END FIX ---
 
-            if found_rec_item:
-                print(f"DEBUG: Updating status of recommendation {recommendation_id} to 'applied' in {recommendations_table.name}.")
-                recommendations_table.update_item(
-                    Key={
-                        'sku_region_pk': found_rec_item['sku_region_pk'],
-                        'timestamp': found_rec_item['timestamp']
-                    },
-                    UpdateExpression="SET #s = :status_val",
-                    ExpressionAttributeNames={'#s': 'status'},
-                    ExpressionAttributeValues={':status_val': 'applied'}
-                )
-                print(f"DEBUG: Recommendation {recommendation_id} status updated to 'applied'.")
-            else:
-                print(f"WARN: Recommendation {recommendation_id} not found to update status.")
+            # --- Call Real-Time Price Sync Agent to handle the actual price update and logging ---
+            # The RealTimePriceSyncAgent expects a list of recommendations under the 'recommendations' key
+            # We pass the NOW UPDATED original_recommendation object.
+            print(f"DEBUG: Calling Real-Time Price Sync Agent for SKU {sku} with new price {new_price}.")
+            sync_event = {'recommendations': [original_recommendation]} # Pass as a list
+            
+            # Import the handler dynamically to avoid circular dependencies if not already imported
+            from lambda_functions.real_time_price_sync_agent.app import lambda_handler as real_time_price_sync_agent_handler_direct
+            sync_response = real_time_price_sync_agent_handler_direct(sync_event, {})
+            
+            sync_result_body = json.loads(sync_response['body'])
+            print(f"DEBUG: Real-Time Price Sync Agent response: {sync_result_body}")
 
-
-            sku_region_pk = f"{sku}_{current_aws_region}"
-            print(f"DEBUG: Updating current_stock for {sku_region_pk} to {new_price} in {inventory_table.name}.")
-            inventory_table.update_item(
-                Key={'sku_region_pk': sku_region_pk},
-                UpdateExpression="SET current_stock = :new_price, last_updated = :ts",
-                ExpressionAttributeValues={
-                    ':new_price': Decimal(str(new_price)), # Convert back to Decimal for DynamoDB storage
-                    ':ts': time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+            # --- FIX: Robust check for sync_results ---
+            # Check if sync_results is not empty AND if the first item's status is 'success'
+            if sync_response['statusCode'] == 200 and sync_result_body.get('sync_results') and len(sync_result_body['sync_results']) > 0 and sync_result_body['sync_results'][0]['status'] == 'success':
+                return {
+                    'statusCode': 200,
+                    'headers': cors_headers,
+                    'body': json.dumps({'message': f'Recommendation {recommendation_id} applied and price updated for {sku}', 'sync_details': sync_result_body['sync_results'][0]})
                 }
-            )
-            print(f"DEBUG: Inventory table updated for {sku_region_pk}.")
+            else:
+                # If sync agent didn't report success or returned empty results
+                print(f"ERROR: Real-Time Price Sync Agent failed or reported non-success: {sync_result_body}")
+                return {
+                    'statusCode': 500,
+                    'headers': cors_headers,
+                    'body': json.dumps({'message': f'Failed to fully apply recommendation {recommendation_id}: Sync agent issue. Details: {sync_result_body}'})
+                }
 
-            return {
-                'statusCode': 200,
-                'headers': cors_headers,
-                'body': json.dumps({'message': f'Recommendation {recommendation_id} applied and price updated for {sku}'})
-            }
         except ClientError as e:
             print(f"ERROR: DynamoDB Client Error applying recommendation: {e.response['Error']['Message']}")
             return {
@@ -280,14 +301,16 @@ def lambda_handler(event, context):
                 'body': json.dumps({'message': f'Error applying recommendation: {e.response["Error"]["Message"]}'})
             }
         except Exception as e:
+            import traceback
             print(f"ERROR: Unexpected error applying recommendation: {e}")
+            print(traceback.format_exc())
             return {
                 'statusCode': 500,
                 'headers': cors_headers,
                 'body': json.dumps({'message': f'Error applying recommendation: {str(e)}'})
             }
 
-
+    # Default response for unhandled paths
     return {
         'statusCode': 404,
         'headers': cors_headers,

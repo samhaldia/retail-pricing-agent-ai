@@ -1,67 +1,104 @@
 import React, { useState } from 'react';
 
-function AIPromoGenerator({ apiBaseUrl }) {
-  const [llmPrompt, setLlmPrompt] = useState('');
-  const [llmResponse, setLlmResponse] = useState('');
-  const [llmLoading, setLlmLoading] = useState(false);
+const AIPromoGenerator = ({ apiUrl }) => {
+  const [sku, setSku] = useState('');
+  const [prompt, setPrompt] = useState('');
+  const [idea, setIdea] = useState('');
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const getPromotionIdeas = async () => {
-    setLlmLoading(true);
-    setLlmResponse('');
+  const getPromotionIdea = async () => {
+    setLoading(true);
     setError(null);
+    setIdea(''); // Clear previous idea
+
+    if (!sku || !prompt) {
+      setError("Please enter both SKU and a prompt.");
+      setLoading(false);
+      return;
+    }
 
     try {
-      const response = await fetch(`${apiBaseUrl}/generate-promo-idea`, {
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: llmPrompt }),
+        body: JSON.stringify({ sku, prompt }),
       });
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      const data = await response.json();
-      setLlmResponse(data.promo_idea);
+      const data = await response.json(); // Parse the JSON response from backend
+
+      // --- NEW DEBUGGING LINE ---
+      console.log("AIPromoGenerator: Received data from backend:", data);
+      // --- END NEW DEBUGGING LINE ---
+
+      // Ensure the key matches exactly what the backend sends
+      // The backend sends: {'promo_idea': promo_text}
+      if (data && data.promo_idea) { // Check if data and promo_idea exist
+        setIdea(data.promo_idea);
+      } else {
+        setError("Received invalid response from backend: 'promo_idea' not found.");
+        console.error("Backend response missing 'promo_idea':", data);
+      }
+
     } catch (e) {
       console.error("Failed to get promotion ideas:", e);
-      setError("Failed to get promotion ideas. Is the backend running?");
+      setError(`Failed to get promotion ideas: ${e.message}`);
     } finally {
-      setLlmLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="bg-white p-8 rounded-xl shadow-lg max-w-2xl mx-auto">
-      <h2 className="text-3xl font-semibold text-gray-800 mb-6">Generate Promotion Ideas with AI 💡</h2>
-      <p className="text-gray-600 mb-4">
-        This feature simulates asking an Amazon Bedrock-powered LLM for creative and data-driven promotion ideas.
-        In a real scenario, the prompt would be enriched with real-time market data, product insights, and target audience profiles.
-      </p>
-      <div className="flex flex-col space-y-4">
-        <textarea
-          className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 resize-y"
-          rows="5"
-          placeholder="e.g., 'Suggest a promotion for new customers buying electronics in US-East.', 'Generate a campaign to clear slow-moving furniture inventory.', 'Give me ideas for a flash sale on audio accessories.'"
-          value={llmPrompt}
-          onChange={(e) => setLlmPrompt(e.target.value)}
-        ></textarea>
-        <button
-          onClick={getPromotionIdeas}
-          disabled={llmLoading || !llmPrompt.trim()}
-          className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {llmLoading ? 'Generating...' : 'Get Promotion Idea'}
-        </button>
+    <div className="bg-white p-6 rounded-lg shadow-md max-w-2xl mx-auto">
+      <h2 className="text-2xl font-semibold text-gray-800 mb-4">Generate AI Promotion Idea</h2>
+      <div className="mb-4">
+        <label htmlFor="sku" className="block text-gray-700 text-sm font-bold mb-2">SKU:</label>
+        <input
+          type="text"
+          id="sku"
+          value={sku}
+          onChange={(e) => setSku(e.target.value)}
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          placeholder="e.g., P001"
+        />
       </div>
-      {error && <div className="mt-4 p-3 bg-red-100 text-red-700 rounded-lg">{error}</div>}
-      {llmResponse && (
-        <div className="mt-6 p-6 bg-blue-50 border border-blue-200 rounded-lg shadow-sm">
-          <h3 className="text-xl font-semibold text-blue-800 mb-3">AI Generated Idea:</h3>
-          <p className="text-blue-700 whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: llmResponse.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }}></p>
+      <div className="mb-6">
+        <label htmlFor="prompt" className="block text-gray-700 text-sm font-bold mb-2">Prompt:</label>
+        <textarea
+          id="prompt"
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline h-32"
+          placeholder="e.g., Suggest a creative social media campaign for summer."
+        ></textarea>
+      </div>
+      <button
+        onClick={getPromotionIdea}
+        className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+        disabled={loading}
+      >
+        {loading ? 'Generating...' : 'Generate Idea'}
+      </button>
+
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mt-4" role="alert">
+          <strong className="font-bold">Error!</strong>
+          <span className="block sm:inline"> {error}</span>
+        </div>
+      )}
+
+      {/* Only render the idea if 'idea' state is not empty */}
+      {idea && (
+        <div className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-md">
+          <h3 className="text-lg font-semibold text-gray-800 mb-2">Generated Promotion Idea:</h3>
+          <p className="text-gray-700 whitespace-pre-line">{idea}</p>
         </div>
       )}
     </div>
   );
-}
+};
 
 export default AIPromoGenerator;

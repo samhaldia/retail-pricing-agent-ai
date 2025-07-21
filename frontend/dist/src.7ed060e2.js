@@ -29089,42 +29089,55 @@ function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) 
 function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
 function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t.return && (u = t.return(), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
 function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
-function AIPromoGenerator(_ref) {
-  var apiBaseUrl = _ref.apiBaseUrl;
+var AIPromoGenerator = function AIPromoGenerator(_ref) {
+  var apiUrl = _ref.apiUrl;
   var _useState = (0, _react.useState)(''),
     _useState2 = _slicedToArray(_useState, 2),
-    llmPrompt = _useState2[0],
-    setLlmPrompt = _useState2[1];
+    sku = _useState2[0],
+    setSku = _useState2[1];
   var _useState3 = (0, _react.useState)(''),
     _useState4 = _slicedToArray(_useState3, 2),
-    llmResponse = _useState4[0],
-    setLlmResponse = _useState4[1];
-  var _useState5 = (0, _react.useState)(false),
+    prompt = _useState4[0],
+    setPrompt = _useState4[1];
+  var _useState5 = (0, _react.useState)(''),
     _useState6 = _slicedToArray(_useState5, 2),
-    llmLoading = _useState6[0],
-    setLlmLoading = _useState6[1];
-  var _useState7 = (0, _react.useState)(null),
+    idea = _useState6[0],
+    setIdea = _useState6[1];
+  var _useState7 = (0, _react.useState)(false),
     _useState8 = _slicedToArray(_useState7, 2),
-    error = _useState8[0],
-    setError = _useState8[1];
-  var getPromotionIdeas = /*#__PURE__*/function () {
+    loading = _useState8[0],
+    setLoading = _useState8[1];
+  var _useState9 = (0, _react.useState)(null),
+    _useState0 = _slicedToArray(_useState9, 2),
+    error = _useState0[0],
+    setError = _useState0[1];
+  var getPromotionIdea = /*#__PURE__*/function () {
     var _ref2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
       var response, data, _t;
       return _regenerator().w(function (_context) {
         while (1) switch (_context.p = _context.n) {
           case 0:
-            setLlmLoading(true);
-            setLlmResponse('');
+            setLoading(true);
             setError(null);
+            setIdea(''); // Clear previous idea
+            if (!(!sku || !prompt)) {
+              _context.n = 1;
+              break;
+            }
+            setError("Please enter both SKU and a prompt.");
+            setLoading(false);
+            return _context.a(2);
+          case 1:
             _context.p = 1;
             _context.n = 2;
-            return fetch("".concat(apiBaseUrl, "/generate-promo-idea"), {
+            return fetch(apiUrl, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({
-                prompt: llmPrompt
+                sku: sku,
+                prompt: prompt
               })
             });
           case 2:
@@ -29139,60 +29152,91 @@ function AIPromoGenerator(_ref) {
             return response.json();
           case 4:
             data = _context.v;
-            setLlmResponse(data.promo_idea);
+            // Parse the JSON response from backend
+
+            // --- NEW DEBUGGING LINE ---
+            console.log("AIPromoGenerator: Received data from backend:", data);
+            // --- END NEW DEBUGGING LINE ---
+
+            // Ensure the key matches exactly what the backend sends
+            // The backend sends: {'promo_idea': promo_text}
+            if (data && data.promo_idea) {
+              // Check if data and promo_idea exist
+              setIdea(data.promo_idea);
+            } else {
+              setError("Received invalid response from backend: 'promo_idea' not found.");
+              console.error("Backend response missing 'promo_idea':", data);
+            }
             _context.n = 6;
             break;
           case 5:
             _context.p = 5;
             _t = _context.v;
             console.error("Failed to get promotion ideas:", _t);
-            setError("Failed to get promotion ideas. Is the backend running?");
+            setError("Failed to get promotion ideas: ".concat(_t.message));
           case 6:
             _context.p = 6;
-            setLlmLoading(false);
+            setLoading(false);
             return _context.f(6);
           case 7:
             return _context.a(2);
         }
       }, _callee, null, [[1, 5, 6, 7]]);
     }));
-    return function getPromotionIdeas() {
+    return function getPromotionIdea() {
       return _ref2.apply(this, arguments);
     };
   }();
   return /*#__PURE__*/_react.default.createElement("div", {
-    className: "bg-white p-8 rounded-xl shadow-lg max-w-2xl mx-auto"
+    className: "bg-white p-6 rounded-lg shadow-md max-w-2xl mx-auto"
   }, /*#__PURE__*/_react.default.createElement("h2", {
-    className: "text-3xl font-semibold text-gray-800 mb-6"
-  }, "Generate Promotion Ideas with AI \uD83D\uDCA1"), /*#__PURE__*/_react.default.createElement("p", {
-    className: "text-gray-600 mb-4"
-  }, "This feature simulates asking an Amazon Bedrock-powered LLM for creative and data-driven promotion ideas. In a real scenario, the prompt would be enriched with real-time market data, product insights, and target audience profiles."), /*#__PURE__*/_react.default.createElement("div", {
-    className: "flex flex-col space-y-4"
-  }, /*#__PURE__*/_react.default.createElement("textarea", {
-    className: "w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 resize-y",
-    rows: "5",
-    placeholder: "e.g., 'Suggest a promotion for new customers buying electronics in US-East.', 'Generate a campaign to clear slow-moving furniture inventory.', 'Give me ideas for a flash sale on audio accessories.'",
-    value: llmPrompt,
+    className: "text-2xl font-semibold text-gray-800 mb-4"
+  }, "Generate AI Promotion Idea"), /*#__PURE__*/_react.default.createElement("div", {
+    className: "mb-4"
+  }, /*#__PURE__*/_react.default.createElement("label", {
+    htmlFor: "sku",
+    className: "block text-gray-700 text-sm font-bold mb-2"
+  }, "SKU:"), /*#__PURE__*/_react.default.createElement("input", {
+    type: "text",
+    id: "sku",
+    value: sku,
     onChange: function onChange(e) {
-      return setLlmPrompt(e.target.value);
-    }
-  }), /*#__PURE__*/_react.default.createElement("button", {
-    onClick: getPromotionIdeas,
-    disabled: llmLoading || !llmPrompt.trim(),
-    className: "bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-  }, llmLoading ? 'Generating...' : 'Get Promotion Idea')), error && /*#__PURE__*/_react.default.createElement("div", {
-    className: "mt-4 p-3 bg-red-100 text-red-700 rounded-lg"
-  }, error), llmResponse && /*#__PURE__*/_react.default.createElement("div", {
-    className: "mt-6 p-6 bg-blue-50 border border-blue-200 rounded-lg shadow-sm"
+      return setSku(e.target.value);
+    },
+    className: "shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline",
+    placeholder: "e.g., P001"
+  })), /*#__PURE__*/_react.default.createElement("div", {
+    className: "mb-6"
+  }, /*#__PURE__*/_react.default.createElement("label", {
+    htmlFor: "prompt",
+    className: "block text-gray-700 text-sm font-bold mb-2"
+  }, "Prompt:"), /*#__PURE__*/_react.default.createElement("textarea", {
+    id: "prompt",
+    value: prompt,
+    onChange: function onChange(e) {
+      return setPrompt(e.target.value);
+    },
+    className: "shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline h-32",
+    placeholder: "e.g., Suggest a creative social media campaign for summer."
+  })), /*#__PURE__*/_react.default.createElement("button", {
+    onClick: getPromotionIdea,
+    className: "bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline",
+    disabled: loading
+  }, loading ? 'Generating...' : 'Generate Idea'), error && /*#__PURE__*/_react.default.createElement("div", {
+    className: "bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mt-4",
+    role: "alert"
+  }, /*#__PURE__*/_react.default.createElement("strong", {
+    className: "font-bold"
+  }, "Error!"), /*#__PURE__*/_react.default.createElement("span", {
+    className: "block sm:inline"
+  }, " ", error)), idea && /*#__PURE__*/_react.default.createElement("div", {
+    className: "mt-6 p-4 bg-gray-50 border border-gray-200 rounded-md"
   }, /*#__PURE__*/_react.default.createElement("h3", {
-    className: "text-xl font-semibold text-blue-800 mb-3"
-  }, "AI Generated Idea:"), /*#__PURE__*/_react.default.createElement("p", {
-    className: "text-blue-700 whitespace-pre-wrap",
-    dangerouslySetInnerHTML: {
-      __html: llmResponse.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    }
-  })));
-}
+    className: "text-lg font-semibold text-gray-800 mb-2"
+  }, "Generated Promotion Idea:"), /*#__PURE__*/_react.default.createElement("p", {
+    className: "text-gray-700 whitespace-pre-line"
+  }, idea)));
+};
 var _default = exports.default = AIPromoGenerator;
 },{"react":"../node_modules/react/index.js"}],"../src/App.js":[function(require,module,exports) {
 "use strict";
@@ -29217,9 +29261,14 @@ function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) 
 function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
 function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t.return && (u = t.return(), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
 function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
-// Base URL for your local Flask backend (acting as API Gateway)
-var API_BASE_URL = 'http://127.0.0.1:5000/api';
-var MOCK_ECOMMERCE_API_URL = 'http://127.0.0.1:5000/mock-api';
+// --- Unified Base URL for all backend interactions ---
+var BASE_URL = 'http://127.0.0.1:5000';
+
+// API Endpoints derived from the BASE_URL
+var PRODUCTS_API_URL = "".concat(BASE_URL, "/api/products");
+var TRIGGER_AGENT_RUN_URL = "".concat(BASE_URL, "/trigger-full-agent-run");
+var GENERATE_PROMO_IDEA_URL = "".concat(BASE_URL, "/api/generate-promo-idea");
+var APPLY_RECOMMENDATION_URL = "".concat(BASE_URL, "/apply-recommendation");
 function App() {
   var _useState = (0, _react.useState)('dashboard'),
     _useState2 = _slicedToArray(_useState, 2),
@@ -29241,6 +29290,10 @@ function App() {
     _useState0 = _slicedToArray(_useState9, 2),
     error = _useState0[0],
     setError = _useState0[1];
+  var _useState1 = (0, _react.useState)(null),
+    _useState10 = _slicedToArray(_useState1, 2),
+    successMessage = _useState10[0],
+    setSuccessMessage = _useState10[1];
   var fetchProductsAndRecommendations = /*#__PURE__*/function () {
     var _ref = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
       var response, data, _t;
@@ -29251,7 +29304,7 @@ function App() {
             setError(null);
             _context.p = 1;
             _context.n = 2;
-            return fetch("".concat(API_BASE_URL, "/products"));
+            return fetch(PRODUCTS_API_URL);
           case 2:
             response = _context.v;
             if (response.ok) {
@@ -29272,7 +29325,7 @@ function App() {
             _context.p = 5;
             _t = _context.v;
             console.error("Failed to fetch data:", _t);
-            setError("Failed to load data. Is the backend running?");
+            setError("Failed to load data. Is the backend running? " + _t.message);
           case 6:
             _context.p = 6;
             setLoading(false);
@@ -29286,57 +29339,86 @@ function App() {
       return _ref.apply(this, arguments);
     };
   }();
+
+  // --- MODIFIED useEffect for conditional refresh ---
   (0, _react.useEffect)(function () {
-    fetchProductsAndRecommendations();
-  }, []);
+    fetchProductsAndRecommendations(); // Always fetch initially on tab change or mount
+
+    var intervalId;
+    // Only set up the interval if the current tab is NOT 'ai_promos'
+    if (activeTab !== 'ai_promos') {
+      intervalId = setInterval(fetchProductsAndRecommendations, 10000); // Refresh every 10 seconds
+    }
+
+    // Cleanup function: Clear the interval when the component unmounts OR when activeTab changes
+    return function () {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [activeTab]); // Rerun this effect whenever activeTab changes
+  // --- END MODIFIED useEffect ---
+
   var applyRecommendation = /*#__PURE__*/function () {
-    var _ref2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(productId, newPrice) {
+    var _ref2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(originalRecommendation) {
       var response, result, _t2;
       return _regenerator().w(function (_context2) {
         while (1) switch (_context2.p = _context2.n) {
           case 0:
-            _context2.p = 0;
-            _context2.n = 1;
-            return fetch("".concat(MOCK_ECOMMERCE_API_URL, "/update_price"), {
+            setLoading(true);
+            setError(null);
+            setSuccessMessage(null);
+            _context2.p = 1;
+            _context2.n = 2;
+            return fetch(APPLY_RECOMMENDATION_URL, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({
-                sku: productId,
-                new_price: newPrice
+                recommendation_id: originalRecommendation.id,
+                sku: originalRecommendation.sku,
+                new_price: originalRecommendation.recommendedPrice,
+                original_recommendation: originalRecommendation
               })
             });
-          case 1:
+          case 2:
             response = _context2.v;
             if (response.ok) {
-              _context2.n = 2;
+              _context2.n = 3;
               break;
             }
             throw new Error("HTTP error! status: ".concat(response.status));
-          case 2:
-            _context2.n = 3;
-            return response.json();
           case 3:
-            result = _context2.v;
-            console.log("Price sync result:", result);
-            // After applying, refetch data to reflect changes
             _context2.n = 4;
-            return fetchProductsAndRecommendations();
+            return response.json();
           case 4:
-            _context2.n = 6;
-            break;
+            result = _context2.v;
+            console.log("Recommendation apply result:", result);
+            setSuccessMessage("Recommendation for ".concat(originalRecommendation.name, " applied successfully!"));
+            setTimeout(function () {
+              return setSuccessMessage(null);
+            }, 3000);
+            _context2.n = 5;
+            return fetchProductsAndRecommendations();
           case 5:
-            _context2.p = 5;
+            _context2.n = 7;
+            break;
+          case 6:
+            _context2.p = 6;
             _t2 = _context2.v;
             console.error("Failed to apply recommendation:", _t2);
-            setError("Failed to apply recommendation. Check backend logs.");
-          case 6:
+            setError("Failed to apply recommendation: ".concat(_t2.message, ". Check backend logs."));
+          case 7:
+            _context2.p = 7;
+            setLoading(false);
+            return _context2.f(7);
+          case 8:
             return _context2.a(2);
         }
-      }, _callee2, null, [[0, 5]]);
+      }, _callee2, null, [[1, 6, 7, 8]]);
     }));
-    return function applyRecommendation(_x, _x2) {
+    return function applyRecommendation(_x) {
       return _ref2.apply(this, arguments);
     };
   }();
@@ -29348,9 +29430,10 @@ function App() {
           case 0:
             setLoading(true);
             setError(null);
+            setSuccessMessage(null);
             _context3.p = 1;
             _context3.n = 2;
-            return fetch('http://127.0.0.1:5000/trigger-full-agent-run', {
+            return fetch(TRIGGER_AGENT_RUN_URL, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json'
@@ -29369,7 +29452,10 @@ function App() {
           case 4:
             result = _context3.v;
             console.log("Full agent run triggered:", result);
-            // Wait a moment for changes to propagate, then refetch
+            setSuccessMessage("Agent workflow triggered successfully! Data will refresh shortly.");
+            setTimeout(function () {
+              return setSuccessMessage(null);
+            }, 3000);
             setTimeout(fetchProductsAndRecommendations, 2000);
             _context3.n = 6;
             break;
@@ -29377,7 +29463,7 @@ function App() {
             _context3.p = 5;
             _t3 = _context3.v;
             console.error("Failed to trigger agent run:", _t3);
-            setError("Failed to trigger agent run. Is main.py running?");
+            setError("Failed to trigger agent run. Is main.py running (for local) or AWS deployed (for AWS)?");
           case 6:
             _context3.p = 6;
             setLoading(false);
@@ -29392,14 +29478,14 @@ function App() {
     };
   }();
   return /*#__PURE__*/_react.default.createElement("div", {
-    className: "min-h-screen bg-gray-100 flex flex-col"
+    className: "min-h-screen bg-gray-100 flex flex-col font-inter"
   }, /*#__PURE__*/_react.default.createElement("header", {
     className: "bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-4 shadow-lg"
   }, /*#__PURE__*/_react.default.createElement("div", {
     className: "container mx-auto flex justify-between items-center"
   }, /*#__PURE__*/_react.default.createElement("h1", {
     className: "text-3xl font-bold"
-  }, "Agentic AI Retail Optimizer \uD83E\uDD16"), /*#__PURE__*/_react.default.createElement("nav", null, /*#__PURE__*/_react.default.createElement("ul", {
+  }, "Autonomous Retail Pricing & Promotion Agent \uD83E\uDD16"), /*#__PURE__*/_react.default.createElement("nav", null, /*#__PURE__*/_react.default.createElement("ul", {
     className: "flex space-x-6"
   }, /*#__PURE__*/_react.default.createElement("li", null, /*#__PURE__*/_react.default.createElement("button", {
     onClick: function onClick() {
@@ -29424,10 +29510,12 @@ function App() {
   }, "AI Promos")))))), /*#__PURE__*/_react.default.createElement("main", {
     className: "container mx-auto p-6 flex-grow"
   }, loading && /*#__PURE__*/_react.default.createElement("div", {
-    className: "text-center text-xl text-blue-600"
+    className: "text-center text-xl text-blue-600 py-8"
   }, "Loading data..."), error && /*#__PURE__*/_react.default.createElement("div", {
-    className: "text-center text-xl text-red-600 bg-red-100 p-4 rounded-lg"
-  }, error), !loading && !error && /*#__PURE__*/_react.default.createElement(_react.default.Fragment, null, activeTab === 'dashboard' && /*#__PURE__*/_react.default.createElement(_Dashboard.default, {
+    className: "text-center text-xl text-red-600 bg-red-100 p-4 rounded-lg shadow-md mb-4"
+  }, error), successMessage && /*#__PURE__*/_react.default.createElement("div", {
+    className: "text-center text-xl text-green-700 bg-green-100 p-4 rounded-lg shadow-md mb-4"
+  }, successMessage), !loading && !error && /*#__PURE__*/_react.default.createElement(_react.default.Fragment, null, activeTab === 'dashboard' && /*#__PURE__*/_react.default.createElement(_Dashboard.default, {
     products: products,
     recommendations: recommendations,
     onTriggerAgentRun: triggerFullAgentRun,
@@ -29451,16 +29539,16 @@ function App() {
       key: product.id,
       product: product,
       onApplyRecommendation: function onApplyRecommendation() {
-        return applyRecommendation(product.id, product.recommendedPrice);
+        return applyRecommendation(product);
       },
       showApplyButton: true
     });
   })) : /*#__PURE__*/_react.default.createElement("p", {
     className: "text-gray-600 text-lg p-4 bg-white rounded-lg shadow-sm"
   }, "\uD83C\uDF89 No new pricing recommendations at the moment. All prices are optimal!")), activeTab === 'ai_promos' && /*#__PURE__*/_react.default.createElement(_AIPromoGenerator.default, {
-    apiBaseUrl: API_BASE_URL
+    apiUrl: GENERATE_PROMO_IDEA_URL
   }))), /*#__PURE__*/_react.default.createElement("footer", {
-    className: "bg-gray-800 text-white p-4 text-center mt-8"
+    className: "bg-gray-800 text-white p-4 text-center mt-8 rounded-t-lg"
   }, /*#__PURE__*/_react.default.createElement("div", {
     className: "container mx-auto"
   }, /*#__PURE__*/_react.default.createElement("p", null, "\xA9 2025 Agentic AI Retail Optimizer. Built for Hackathon. \uD83D\uDE80"))));
@@ -29501,7 +29589,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "62590" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "62287" + '/');
   ws.onmessage = function (event) {
     checkedAssets = {};
     assetsToAccept = [];

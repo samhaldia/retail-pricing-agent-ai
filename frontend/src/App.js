@@ -3,9 +3,14 @@ import ProductCard from './components/ProductCard';
 import Dashboard from './components/Dashboard';
 import AIPromoGenerator from './components/AIPromoGenerator';
 
-// Base URL for your local Flask backend (acting as API Gateway)
-const API_BASE_URL = 'http://127.0.0.1:5000/api';
-const MOCK_ECOMMERCE_API_URL = 'http://127.0.0.1:5000/mock-api';
+// --- Unified Base URL for all backend interactions ---
+const BASE_URL = 'http://127.0.0.1:5000';
+
+// API Endpoints derived from the BASE_URL
+const PRODUCTS_API_URL = `${BASE_URL}/api/products`;
+const TRIGGER_AGENT_RUN_URL = `${BASE_URL}/trigger-full-agent-run`;
+const GENERATE_PROMO_IDEA_URL = `${BASE_URL}/api/generate-promo-idea`;
+const APPLY_RECOMMENDATION_URL = `${BASE_URL}/apply-recommendation`;
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -13,12 +18,13 @@ function App() {
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
 
   const fetchProductsAndRecommendations = async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${API_BASE_URL}/products`);
+      const response = await fetch(PRODUCTS_API_URL);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -27,41 +33,71 @@ function App() {
       setRecommendations(data.recommendations);
     } catch (e) {
       console.error("Failed to fetch data:", e);
-      setError("Failed to load data. Is the backend running?");
+      setError("Failed to load data. Is the backend running? " + e.message);
     } finally {
       setLoading(false);
     }
   };
 
+  // --- MODIFIED useEffect for conditional refresh ---
   useEffect(() => {
-    fetchProductsAndRecommendations();
-  }, []);
+    fetchProductsAndRecommendations(); // Always fetch initially on tab change or mount
 
-  const applyRecommendation = async (productId, newPrice) => {
+    let intervalId;
+    // Only set up the interval if the current tab is NOT 'ai_promos'
+    if (activeTab !== 'ai_promos') {
+      intervalId = setInterval(fetchProductsAndRecommendations, 10000); // Refresh every 10 seconds
+    }
+
+    // Cleanup function: Clear the interval when the component unmounts OR when activeTab changes
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [activeTab]); // Rerun this effect whenever activeTab changes
+  // --- END MODIFIED useEffect ---
+
+  const applyRecommendation = async (originalRecommendation) => {
+    setLoading(true);
+    setError(null);
+    setSuccessMessage(null);
     try {
-      const response = await fetch(`${MOCK_ECOMMERCE_API_URL}/update_price`, {
+      const response = await fetch(APPLY_RECOMMENDATION_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sku: productId, new_price: newPrice }),
+        body: JSON.stringify({
+            recommendation_id: originalRecommendation.id,
+            sku: originalRecommendation.sku,
+            new_price: originalRecommendation.recommendedPrice,
+            original_recommendation: originalRecommendation
+        }),
       });
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const result = await response.json();
-      console.log("Price sync result:", result);
-      // After applying, refetch data to reflect changes
+      console.log("Recommendation apply result:", result);
+
+      setSuccessMessage(`Recommendation for ${originalRecommendation.name} applied successfully!`);
+      setTimeout(() => setSuccessMessage(null), 3000);
+
       await fetchProductsAndRecommendations();
     } catch (e) {
       console.error("Failed to apply recommendation:", e);
-      setError("Failed to apply recommendation. Check backend logs.");
+      setError(`Failed to apply recommendation: ${e.message}. Check backend logs.`);
+    } finally {
+      setLoading(false);
     }
   };
 
   const triggerFullAgentRun = async () => {
     setLoading(true);
     setError(null);
+    setSuccessMessage(null);
     try {
-      const response = await fetch('http://127.0.0.1:5000/trigger-full-agent-run', {
+      const response = await fetch(TRIGGER_AGENT_RUN_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -70,21 +106,22 @@ function App() {
       }
       const result = await response.json();
       console.log("Full agent run triggered:", result);
-      // Wait a moment for changes to propagate, then refetch
-      setTimeout(fetchProductsAndRecommendations, 2000); 
+      setSuccessMessage("Agent workflow triggered successfully! Data will refresh shortly.");
+      setTimeout(() => setSuccessMessage(null), 3000);
+      setTimeout(fetchProductsAndRecommendations, 2000);
     } catch (e) {
       console.error("Failed to trigger agent run:", e);
-      setError("Failed to trigger agent run. Is main.py running?");
+      setError("Failed to trigger agent run. Is main.py running (for local) or AWS deployed (for AWS)?");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col">
+    <div className="min-h-screen bg-gray-100 flex flex-col font-inter">
       <header className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-4 shadow-lg">
         <div className="container mx-auto flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Agentic AI Retail Optimizer 🤖</h1>
+          <h1 className="text-3xl font-bold">Autonomous Retail Pricing & Promotion Agent 🤖</h1>
           <nav>
             <ul className="flex space-x-6">
               <li><button onClick={() => setActiveTab('dashboard')} className={`py-2 px-4 rounded-md transition-colors ${activeTab === 'dashboard' ? 'bg-blue-700 font-semibold' : 'hover:bg-blue-500'}`}>Dashboard</button></li>
@@ -97,8 +134,13 @@ function App() {
       </header>
 
       <main className="container mx-auto p-6 flex-grow">
-        {loading && <div className="text-center text-xl text-blue-600">Loading data...</div>}
-        {error && <div className="text-center text-xl text-red-600 bg-red-100 p-4 rounded-lg">{error}</div>}
+        {loading && <div className="text-center text-xl text-blue-600 py-8">Loading data...</div>}
+        {error && <div className="text-center text-xl text-red-600 bg-red-100 p-4 rounded-lg shadow-md mb-4">{error}</div>}
+        {successMessage && (
+          <div className="text-center text-xl text-green-700 bg-green-100 p-4 rounded-lg shadow-md mb-4">
+            {successMessage}
+          </div>
+        )}
 
         {!loading && !error && (
           <>
@@ -112,7 +154,9 @@ function App() {
             )}
             {activeTab === 'products' && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {products.map(product => (<ProductCard key={product.id} product={product} showApplyButton={false} />))}
+                {products.map(product => (
+                  <ProductCard key={product.id} product={product} showApplyButton={false} />
+                ))}
               </div>
             )}
             {activeTab === 'recommendations' && (
@@ -124,7 +168,7 @@ function App() {
                       <ProductCard 
                         key={product.id} 
                         product={product} 
-                        onApplyRecommendation={() => applyRecommendation(product.id, product.recommendedPrice)} 
+                        onApplyRecommendation={() => applyRecommendation(product)} 
                         showApplyButton={true} 
                       />
                     ))}
@@ -134,12 +178,14 @@ function App() {
                 )}
               </div>
             )}
-            {activeTab === 'ai_promos' && <AIPromoGenerator apiBaseUrl={API_BASE_URL} />}
+            {activeTab === 'ai_promos' && (
+              <AIPromoGenerator apiUrl={GENERATE_PROMO_IDEA_URL} />
+            )}
           </>
         )}
       </main>
 
-      <footer className="bg-gray-800 text-white p-4 text-center mt-8">
+      <footer className="bg-gray-800 text-white p-4 text-center mt-8 rounded-t-lg">
         <div className="container mx-auto">
           <p>&copy; 2025 Agentic AI Retail Optimizer. Built for Hackathon. 🚀</p>
         </div>
