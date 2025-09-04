@@ -175,7 +175,7 @@ Before you begin, ensure you have the following installed and configured:
     }
     ```
 6.  Create the state machine.
-7.  Copy its **ARN** (e.g., `arn:aws:states:us-east-1:123456789012:stateMachine:RetailPricingOptimizationWorkflow`). You will paste this ARN into the `STEP_FUNCTIONS_STATE_MACHINE_ARN` variable in your local `.env` file.
+7.  Copy its **ARN** (e.g., `arn:aws:states:us-east-1:YOUR_ACCOUNT_ID:stateMachine:RetailPricingOptimizationWorkflow`). You will paste this ARN into the `STEP_FUNCTIONS_STATE_MACHINE_ARN` variable in your local `.env` file.
 
 ### Run Your Local Application and Test Connection to AWS
 
