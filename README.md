@@ -92,8 +92,6 @@ Before you begin, ensure you have the following installed and configured:
 
 ### Create Your AWS Resources (Using AWS Console UI)
 
-**Important**: Ensure you are operating within the **US East (N. Virginia) `us-east-1` region** in your AWS Console for all resource creation.
-
 #### 1. Create IAM Role (`RetailAgentLambdaRole`)
 
 1.  Navigate to **IAM** -> **Roles** -> **Create role**.
